@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FinDiff — Modelación Financiera con Ecuaciones Diferenciales</title>
+  <link rel="stylesheet" href="/static/css/estilos.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ── Barra lateral ───────────────────────────────────────── -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">FinDiff</div>
+      <div class="logo-sub">Ecuaciones Diferenciales<br>en Finanzas Personales</div>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="group-label">Fase 1 — 1.er Orden</div>
+      <button class="mod-btn" data-mod="1">📈 Crecimiento puro</button>
+      <button class="mod-btn" data-mod="2">💰 Aportes constantes</button>
+      <button class="mod-btn" data-mod="2d">⏳ Aportes diferidos</button>
+      <button class="mod-btn" data-mod="3">🌀 Bernoulli / No lineal</button>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="group-label">Fase 2 — 2.° Orden</div>
+      <button class="mod-btn" data-mod="4">🔧 Amortiguación</button>
+      <button class="mod-btn" data-mod="5">📊 Ciclos de mercado</button>
+      <button class="mod-btn" data-mod="6">⏱ Cauchy-Euler</button>
+      <button class="mod-btn" data-mod="7">⚖ Capital-Deuda</button>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="group-label">Herramientas</div>
+      <button class="mod-btn" data-mod="comparar">🔀 Comparar escenarios</button>
+    </div>
+
+    <div class="sidebar-group">
+      <div class="group-label">Ayuda</div>
+      <button class="mod-btn" id="btn-tutorial">🎓 Tutorial de uso</button>
+      <button class="mod-btn" id="btn-glosario">📖 Glosario de términos</button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-version">FinDiff v1.0</div>
+      <div class="sidebar-credito">Proyecto Integrador · Ecuaciones Diferenciales · Ucompensar 2025 © Santiago Bayona Bohorquez.</div>
+    </div>
+  </nav>
+
+  <!-- ── Panel principal ─────────────────────────────────────── -->
+  <main id="panel-principal">
+
+    <!-- Formulario dinámico -->
+    <section id="panel-form">
+      <div id="form-titulo" class="form-titulo">Selecciona un módulo</div>
+      <div id="form-ecuacion" class="form-ecuacion"></div>
+      <div id="form-campos"></div>
+      <button id="btn-calcular" class="btn-calcular" style="display:none">
+        Calcular
+      </button>
+      <div id="form-error" class="form-error"></div>
+    </section>
+
+    <!-- Resultados -->
+    <section id="panel-resultados">
+      <div id="resultado-formula" class="resultado-formula"></div>
+
+      <div class="grafica-wrapper">
+        <canvas id="grafica"></canvas>
+      </div>
+
+      <div id="resultado-metricas" class="resultado-metricas"></div>
+      <div id="resultado-interpretacion" class="resultado-interpretacion"></div>
+    </section>
+
+  </main>
+
+</div><!-- #app -->
+
+<!-- Plantillas de formularios (ocultas) -->
+<template id="tpl-1">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="10000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de rendimiento r (decimal anual continuo, ej: 0.08)</label>
+    <input type="number" name="r" value="0.08" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="20" step="1">
+  </div>
+</template>
+
+<template id="tpl-2">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="5000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de rendimiento r (decimal anual continuo)</label>
+    <input type="number" name="r" value="0.06" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Aporte neto continuo k (negativo = retiro)</label>
+    <input type="number" name="k" value="1200" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="25" step="1">
+  </div>
+</template>
+
+<template id="tpl-2d">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="3000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de rendimiento r</label>
+    <input type="number" name="r" value="0.07" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Aporte k (comienza en t=a)</label>
+    <input type="number" name="k" value="1500" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Inicio de aportes a (años)</label>
+    <input type="number" name="a" value="3" step="0.5">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="20" step="1">
+  </div>
+</template>
+
+<template id="tpl-3">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="1000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa base r</label>
+    <input type="number" name="r" value="0.05" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Coeficiente no lineal α</label>
+    <input type="number" name="alpha" value="0.00001" step="0.00001">
+  </div>
+  <div class="campo-grupo">
+    <label>Exponente n (≠1)</label>
+    <input type="number" name="n" value="2" step="0.5">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="30" step="1">
+  </div>
+</template>
+
+<template id="tpl-4">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="10000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Velocidad inicial S₀' (tasa de cambio en t=0)</label>
+    <input type="number" name="S1" value="0" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Coef. amortiguación c (costos, impuestos)</label>
+    <input type="number" name="c" value="0.1" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de rendimiento r</label>
+    <input type="number" name="r" value="0.08" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Aporte neto k</label>
+    <input type="number" name="k" value="500" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="20" step="1">
+  </div>
+</template>
+
+<template id="tpl-5">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="10000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Coef. amortiguación c (diversificación)</label>
+    <input type="number" name="c" value="0.2" step="0.05">
+  </div>
+  <div class="campo-grupo">
+    <label>Frecuencia natural del portafolio ω₀</label>
+    <input type="number" name="w0" value="1.0" step="0.1">
+  </div>
+  <div class="campo-grupo">
+    <label>Amplitud del ciclo de mercado F</label>
+    <input type="number" name="F" value="500" step="50">
+  </div>
+  <div class="campo-grupo">
+    <label>Frecuencia del ciclo ω (prueba ω≈ω₀ para resonancia)</label>
+    <input type="number" name="w" value="0.8" step="0.1">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="30" step="1">
+  </div>
+</template>
+
+<template id="tpl-6">
+  <div class="campo-grupo">
+    <label>Capital inicial S(t₀)</label>
+    <input type="number" name="S0" value="10000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Velocidad inicial S'(t₀)</label>
+    <input type="number" name="S1" value="500" step="50">
+  </div>
+  <div class="campo-grupo">
+    <label>Coeficiente a (prima de plazo)</label>
+    <input type="number" name="a" value="1.5" step="0.1">
+  </div>
+  <div class="campo-grupo">
+    <label>Coeficiente b (costo de oportunidad)</label>
+    <input type="number" name="b" value="0.5" step="0.1">
+  </div>
+  <div class="campo-grupo">
+    <label>Tiempo inicial t₀ (>0)</label>
+    <input type="number" name="t0" value="1" step="0.5">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="20" step="1">
+  </div>
+</template>
+
+<template id="tpl-7">
+  <div class="campo-grupo">
+    <label>Capital inicial S₀</label>
+    <input type="number" name="S0" value="20000" step="500">
+  </div>
+  <div class="campo-grupo">
+    <label>Deuda inicial D₀</label>
+    <input type="number" name="D0" value="15000" step="500">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de rendimiento del capital r</label>
+    <input type="number" name="r" value="0.07" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Tasa de amortización de deuda λ</label>
+    <input type="number" name="lam" value="0.10" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Carga de la deuda sobre capital α</label>
+    <input type="number" name="alpha" value="0.05" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Efecto del capital sobre nueva deuda β</label>
+    <input type="number" name="beta" value="0.02" step="0.01">
+  </div>
+  <div class="campo-grupo">
+    <label>Ingreso neto continuo k</label>
+    <input type="number" name="k" value="2000" step="100">
+  </div>
+  <div class="campo-grupo">
+    <label>Horizonte T (años)</label>
+    <input type="number" name="T" value="15" step="1">
+  </div>
+</template>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/graficas.js"></script>
+<script src="/static/js/main.js"></script>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL TUTORIAL
+     ══════════════════════════════════════════════════════ -->
+<div id="overlay-tutorial" class="overlay" style="display:none">
+  <div class="modal-tutorial">
+    <button class="modal-cerrar" id="cerrar-tutorial">✕</button>
+
+    <!-- Indicador de pasos -->
+    <div class="tut-progress">
+      <div id="tut-barra" class="tut-barra" style="width:11.1%"></div>
+    </div>
+    <div id="tut-step-label" class="tut-step-label">Paso 1 de 9</div>
+
+    <!-- Contenido del paso actual -->
+    <div id="tut-contenido" class="tut-contenido"></div>
+
+    <!-- Navegación -->
+    <div class="tut-nav">
+      <button class="btn-tut-nav btn-tut-prev" id="tut-prev">← Anterior</button>
+      <div id="tut-dots" class="tut-dots"></div>
+      <button class="btn-tut-nav btn-tut-next" id="tut-next">Siguiente →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     MODAL GLOSARIO
+     ══════════════════════════════════════════════════════ -->
+<div id="overlay-glosario" class="overlay" style="display:none">
+  <div class="modal-glosario">
+    <button class="modal-cerrar" id="cerrar-glosario">✕</button>
+    <div class="glos-titulo">📖 Glosario de Términos</div>
+    <div class="glos-subtitulo">Todo lo que necesitas saber para usar FinDiff</div>
+    <div class="glos-busqueda-wrap">
+      <input type="text" id="glos-buscar" class="glos-buscar" placeholder="Buscar término…">
+    </div>
+    <div id="glos-lista" class="glos-lista"></div>
+  </div>
+</div>
+
+<script src="/static/js/tutorial.js"></script>
+</body>
+</html>
